@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: #0e0e10;
+    color: #e5e1e4;
+  }
+}
+
+@layer utilities {
+  .game-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  }
+  .game-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0 30px 4px rgba(145, 70, 255, 0.5);
+    border-color: rgba(145, 70, 255, 0.4);
+  }
+
+  .glass-modal {
+    background: rgba(19, 19, 21, 0.95);
+    backdrop-filter: blur(20px);
+  }
+
+  .spinner {
+    border: 3px solid rgba(145, 70, 255, 0.1);
+    border-top: 3px solid #9146ff;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 4s linear infinite;
+  }
+
+  .nav-link-active {
+    background-color: rgba(145, 70, 255, 0.1);
+    color: #d5baff !important;
+    border-right: 4px solid #9146ff;
+  }
+
+  .game-rating {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #00e479;
+    border: 1px solid rgba(0, 228, 121, 0.3);
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0e0e10;
+}
+::-webkit-scrollbar-thumb {
+  background: #353437;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9146ff;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #4b4455;
+  border-radius: 10px;
+}
+
+/* Enhanced Drag-to-scroll Smoothness */
+#genreScrollContainer {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-drag: none;
+  will-change: scroll-position;
+}
+#genreScrollContainer.active-scroll {
+  cursor: grabbing;
+  scroll-snap-type: none !important;
+  scroll-behavior: auto !important;
+}
+#genreScrollContainer img {
+  pointer-events: none;
+}
+
+/* Responsive Grid Variables */
+.responsive-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-cols, 4), 1fr);
+  gap: 1.5rem;
+  transition: grid-template-columns 0.4s cubic-bezier(0.4, 0, 0.2, 1), gap 0.4s ease;
+}
+
+@media (max-width: 1024px) {
+  .responsive-grid {
+    grid-template-columns: repeat(min(var(--grid-cols, 3), 3), 1fr);
+    gap: 1rem;
+  }
+}
+@media (max-width: 640px) {
+  .responsive-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
