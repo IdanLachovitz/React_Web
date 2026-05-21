@@ -5,17 +5,30 @@ import GenreCarousel from '../components/GenreCarousel';
 import GameGrid from '../components/GameGrid';
 
 export default function Home() {
-  const { token } = useAuth();
+  const { token, gameCache, updateGameCache, isAuthLoading } = useAuth();
   const [games, setGames] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const cachedRecommendations = gameCache['recommendations'];
+
   useEffect(() => {
     let mounted = true;
+
+    if (isAuthLoading) return;
+
+    // Check if recommendations are already in cache
+    if (cachedRecommendations) {
+      setGames(cachedRecommendations);
+      setIsLoading(false);
+      return;
+    }
+
     const loadHome = async () => {
       try {
         const data = await fetchCategory('recommendations', token);
         if (mounted) {
           setGames(data);
+          updateGameCache('recommendations', data);
           setIsLoading(false);
         }
       } catch (err) {
@@ -25,17 +38,17 @@ export default function Home() {
     };
     loadHome();
     return () => { mounted = false; };
-  }, [token]);
+  }, [token, cachedRecommendations, updateGameCache, isAuthLoading]);
 
   return (
     <div className="pb-20">
-      <div className="mb-6 relative inline-block">
+      <div className="mb-2 relative inline-block">
         <div className="absolute inset-0 bg-purple-600/25 blur-[60px] rounded-full pointer-events-none -z-10 scale-110"></div>
         <h1 className="text-3xl sm:text-2xl md:text-[3rem] font-black text-white tracking-tighter leading-[1.1]">
           Welcome to <span className="text-purple-500">GameSense</span>
         </h1>
       </div>
-      <p className="text-gray-400 font-inter text-lg md:text-l max-w-full leading-relaxed mb-10">
+      <p className="text-gray-400 font-inter text-lg md:text-l max-w-full leading-relaxed mb-4">
         Stop searching, start playing. Get tailored game recommendations and manage your ultimate personal collection
       </p>
 

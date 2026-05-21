@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { API_URL } from '../api';
 
 const AuthContext = createContext();
 
@@ -8,7 +9,9 @@ export function AuthProvider({ children }) {
   const [libraryIds, setLibraryIds] = useState(new Set());
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isLoginRequiredModalOpen, setIsLoginRequiredModalOpen] = useState(false);
+  const [gameCache, setGameCache] = useState({});
   const [toastMessage, setToastMessage] = useState('');
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('gs_user');
@@ -16,13 +19,15 @@ export function AuthProvider({ children }) {
     if (storedUser && storedToken) {
       setUser(storedUser);
       setToken(storedToken);
-      fetchLibraryIds(storedToken);
+      fetchLibraryIds(storedToken).finally(() => setIsAuthLoading(false));
+    } else {
+      setIsAuthLoading(false);
     }
   }, []);
 
   const fetchLibraryIds = async (authToken) => {
     try {
-      const res = await fetch('/library/ids', {
+      const res = await fetch(`${API_URL}/library/ids`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
       if (res.ok) {
@@ -42,6 +47,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('gs_last_active', Date.now());
     setUser(username);
     setToken(jwtToken);
+    setGameCache({}); // Clear cache on login to refresh user-specific data
     fetchLibraryIds(jwtToken);
   };
 
@@ -53,9 +59,14 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('gs_last_active');
     setUser(null);
     setToken(null);
+    setGameCache({}); // Clear cache on logout
     setLibraryIds(new Set());
     showToast(`You have been logged out from ${user}.`);
   };
+
+  const updateGameCache = useCallback((key, data) => {
+    setGameCache(prev => ({ ...prev, [key]: data }));
+  }, []);
 
   const showToast = (message, duration = 2000) => {
     setToastMessage(message);
@@ -66,12 +77,19 @@ export function AuthProvider({ children }) {
 
   const addToLibrary = async (gameId) => {
     if (!token) return false;
-    const res = await fetch(`/library/add/${gameId}`, {
+    const res = await fetch(`${API_URL}/library/add/${gameId}`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (res.ok || res.status === 400) {
       setLibraryIds(prev => new Set([...prev, gameId]));
+      // Invalidate library and recommendations cache so they refresh on next view
+      setGameCache(prev => {
+        const newCache = { ...prev };
+        delete newCache['library'];
+        delete newCache['recommendations'];
+        return newCache;
+      });
       return true;
     }
     return false;
@@ -79,7 +97,7 @@ export function AuthProvider({ children }) {
 
   const removeFromLibrary = async (gameId) => {
     if (!token) return false;
-    const res = await fetch(`/library/remove/${gameId}`, {
+    const res = await fetch(`${API_URL}/library/remove/${gameId}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -89,17 +107,25 @@ export function AuthProvider({ children }) {
         newSet.delete(gameId);
         return newSet;
       });
+      // Invalidate library and recommendations cache so they refresh on next view
+      setGameCache(prev => {
+        const newCache = { ...prev };
+        delete newCache['library'];
+        delete newCache['recommendations'];
+        return newCache;
+      });
       return true;
     }
     return false;
   };
 
   return (
-    <AuthContext.Provider value={{ 
+    <AuthContext.Provider value={{
       user, token, libraryIds, login, logout, addToLibrary, removeFromLibrary,
       isAuthModalOpen, setIsAuthModalOpen,
       isLoginRequiredModalOpen, setIsLoginRequiredModalOpen,
-      toastMessage, showToast
+      toastMessage, showToast, isAuthLoading,
+      gameCache, updateGameCache
     }}>
       {children}
     </AuthContext.Provider>

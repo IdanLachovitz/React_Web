@@ -8,7 +8,7 @@ export default function Category() {
   const { id } = useParams();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { token, user, setIsLoginRequiredModalOpen } = useAuth();
+  const { token, user, setIsLoginRequiredModalOpen, gameCache, updateGameCache, isAuthLoading } = useAuth();
   const [allGames, setAllGames] = useState([]);
   const [filteredGames, setFilteredGames] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,8 +18,8 @@ export default function Category() {
   const [genreFilter, setGenreFilter] = useState('all');
 
   // Derive category ID from path if not in params
-  const categoryId = id || pathname.split('/').pop();
-  
+  const categoryId = id || (pathname === '/library' ? 'library' : pathname === '/recommendations' ? 'recommendations' : '');
+
   // Format title based on category ID
   const getTitle = () => {
     switch (categoryId) {
@@ -45,24 +45,34 @@ export default function Category() {
 
   const isGenreCat = !isNaN(categoryId);
 
+  const cachedData = gameCache[categoryId];
+
   useEffect(() => {
     let mounted = true;
-    
+
+    // Wait for auth to initialize
+    if (isAuthLoading || !categoryId) return;
+
     if (categoryId === 'library' && !user) {
-      setIsLoading(false);
-      setAllGames([]);
-      setFilteredGames([]);
       setIsLoginRequiredModalOpen(true);
       navigate('/');
       return;
     }
 
     const loadGames = async () => {
+      // If we have cached data, use it but don't return, allowing sync update
+      if (cachedData) {
+        setAllGames(cachedData);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       try {
         const data = await fetchCategory(categoryId, token);
         if (mounted) {
           setAllGames(data);
+          updateGameCache(categoryId, data);
           setIsLoading(false);
         }
       } catch (err) {
@@ -70,10 +80,10 @@ export default function Category() {
         if (mounted) setIsLoading(false);
       }
     };
-    
+
     loadGames();
     return () => { mounted = false; };
-  }, [categoryId, token, user]);
+  }, [categoryId, token, user, cachedData, updateGameCache, isAuthLoading]);
 
   useEffect(() => {
     let filtered = allGames;
@@ -124,37 +134,37 @@ export default function Category() {
       <h1 className="text-3xl sm:text-4xl md:text-[2.5rem] font-black text-white mb-2 tracking-tighter uppercase">{getTitle()}</h1>
       <div className="flex flex-col gap-4 mt-6 mb-8 border-b border-white/5 pb-6">
         <div className="flex flex-col gap-6">
-            <div className="flex flex-col md:flex-row md:items-center gap-4">
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest md:w-32">Platform Filter</span>
-                <div className="flex flex-wrap gap-2">
-                    {platforms.map(p => (
-                        <button 
-                            key={p.id}
-                            onClick={() => setPlatformFilter(p.id)}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border border-white/10 ${platformFilter === p.id ? 'bg-purple-600 text-white border-purple-500' : 'bg-white/5 text-gray-500 hover:text-white hover:bg-white/10'}`}
-                        >
-                            {p.name}
-                        </button>
-                    ))}
-                </div>
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest md:w-34">Platform Filter</span>
+            <div className="flex flex-wrap gap-2">
+              {platforms.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => setPlatformFilter(p.id)}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border border-white/10 ${platformFilter === p.id ? 'bg-purple-600 text-white border-purple-500' : 'bg-white/5 text-gray-500 hover:text-white hover:bg-white/10'}`}
+                >
+                  {p.name}
+                </button>
+              ))}
             </div>
-            
-            {!isGenreCat && (
-                <div className="flex flex-col md:flex-row md:items-center gap-4">
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest md:w-32">Genre Filter</span>
-                    <div className="flex flex-wrap gap-2">
-                        {genres.map(g => (
-                            <button 
-                                key={g.id}
-                                onClick={() => setGenreFilter(g.value)}
-                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border border-white/10 ${genreFilter === g.value ? 'bg-purple-600 text-white border-purple-500' : 'bg-white/5 text-gray-500 hover:text-white hover:bg-white/10'}`}
-                            >
-                                {g.name}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
+          </div>
+
+          {!isGenreCat && (
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-widest md:w-32">Genre Filter</span>
+              <div className="flex flex-wrap gap-2">
+                {genres.map(g => (
+                  <button
+                    key={g.id}
+                    onClick={() => setGenreFilter(g.value)}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border border-white/10 ${genreFilter === g.value ? 'bg-purple-600 text-white border-purple-500' : 'bg-white/5 text-gray-500 hover:text-white hover:bg-white/10'}`}
+                  >
+                    {g.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <GameGrid games={filteredGames} isLoading={isLoading} />
