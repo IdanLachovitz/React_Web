@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { API_URL } from '../api';
+import { localLogin, localRegister } from '../api';
 import { X, Eye, EyeOff, CheckCircle2, Circle } from 'lucide-react';
 
 export default function AuthModal({ onClose }) {
@@ -36,20 +36,11 @@ export default function AuthModal({ onClose }) {
     }
 
     try {
-      const res = await fetch(`${API_URL}/${authMode}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
+      const apiFn = authMode === 'login' ? localLogin : localRegister;
+      const res = await apiFn(username, password);
 
       let data;
-      const contentType = res.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        data = await res.json();
-      } else {
-        const textError = await res.text();
-        throw new Error(`Server returned non-JSON response (Status: ${res.status}): ${textError.substring(0, 200)}...`);
-      }
+      data = await res.json();
 
       if (res.ok) {
         if (authMode === 'login') {

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { API_URL } from '../api';
+import { fetchLocalLibraryIds, addLocalToLibrary, removeLocalFromLibrary } from '../api';
 
 const AuthContext = createContext();
 
@@ -27,9 +27,7 @@ export function AuthProvider({ children }) {
 
   const fetchLibraryIds = async (authToken) => {
     try {
-      const res = await fetch(`${API_URL}/library/ids`, {
-        headers: { 'Authorization': `Bearer ${authToken}` }
-      });
+      const res = await fetchLocalLibraryIds(authToken);
       if (res.ok) {
         const ids = await res.json();
         setLibraryIds(new Set(ids));
@@ -77,10 +75,7 @@ export function AuthProvider({ children }) {
 
   const addToLibrary = async (gameId) => {
     if (!token) return false;
-    const res = await fetch(`${API_URL}/library/add/${gameId}`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const res = await addLocalToLibrary(gameId, token);
     if (res.ok || res.status === 400) {
       setLibraryIds(prev => new Set([...prev, gameId]));
       // Invalidate library and recommendations cache so they refresh on next view
@@ -97,10 +92,7 @@ export function AuthProvider({ children }) {
 
   const removeFromLibrary = async (gameId) => {
     if (!token) return false;
-    const res = await fetch(`${API_URL}/library/remove/${gameId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const res = await removeLocalFromLibrary(gameId, token);
     if (res.ok) {
       setLibraryIds(prev => {
         const newSet = new Set(prev);
